@@ -1,0 +1,493 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Inter', system-ui, sans-serif;
+  scroll-behavior: smooth;
+  height: 100%;
+  overflow-x: hidden;
+  /* Support for iOS safe areas */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #000;
+  color: #fff;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Hide scrollbar */
+::-webkit-scrollbar {
+  display: none;
+}
+
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.glass-bg {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(24px);
+}
+
+.gradient-text {
+  background: linear-gradient(to right, #ffffff, #e5e7eb, #9ca3af);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Mobile Menu Backdrop Blur */
+.mobile-menu-backdrop {
+  background: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Better text rendering on mobile */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* iOS safe area support */
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+}
+
+
+.section-padding {
+  padding: 5rem 0;
+}
+
+@media (min-width: 768px) {
+  .section-padding {
+    padding: 8rem 0;
+  }
+}
+
+.container-custom {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-custom {
+    padding: 0 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-custom {
+    padding: 0 2rem;
+  }
+}
+
+/* Theme System */
+:root {
+  --bg-primary: #000;
+  --bg-secondary: #111;
+  --bg-card: #1a1a1a;
+  --text-primary: #fff;
+  --text-secondary: #e5e7eb;
+  --text-muted: #9ca3af;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(0, 0, 0, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --hover-bg: rgba(255, 255, 255, 0.05);
+}
+
+.light-theme {
+  --bg-primary: #fff;
+  --bg-secondary: #f8fafc;
+  --bg-card: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --border-color: rgba(15, 23, 42, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(15, 23, 42, 0.08);
+  --hover-bg: rgba(15, 23, 42, 0.05);
+}
+
+.dark-theme {
+  --bg-primary: #000;
+  --bg-secondary: #111;
+  --bg-card: #1a1a1a;
+  --text-primary: #fff;
+  --text-secondary: #e5e7eb;
+  --text-muted: #9ca3af;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(0, 0, 0, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --hover-bg: rgba(255, 255, 255, 0.05);
+}
+
+/* Apply theme variables */
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.glass-bg {
+  background: var(--glass-bg);
+  transition: background 0.3s ease;
+}
+
+/* Theme-aware text colors */
+.text-theme-primary {
+  color: var(--text-primary);
+}
+
+.text-theme-secondary {
+  color: var(--text-secondary);
+}
+
+.text-theme-muted {
+  color: var(--text-muted);
+}
+
+/* Theme-aware backgrounds */
+.bg-theme-primary {
+  background-color: var(--bg-primary);
+}
+
+.bg-theme-secondary {
+  background-color: var(--bg-secondary);
+}
+
+/* Theme-aware borders */
+.border-theme {
+  border-color: var(--border-color);
+}
+
+/* Light theme specific adjustments */
+.light-theme .glass-bg {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(40px) saturate(200%) brightness(110%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(110%);
+}
+
+.light-theme section {
+  background: var(--bg-primary);
+}
+
+.light-theme .gradient-text {
+  background: linear-gradient(to right, #0f172a, #334155, #64748b);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Light theme cards and borders */
+.light-theme .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.2) !important;
+}
+
+.light-theme .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.3) !important;
+}
+
+.light-theme .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+.light-theme .bg-white\/10 {
+  background-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+/* Light theme text colors - use dark text for readability */
+.light-theme .text-white {
+  color: #0f172a !important;
+}
+
+.light-theme .text-gray-300 {
+  color: #334155 !important;
+}
+
+.light-theme .text-gray-400 {
+  color: #64748b !important;
+}
+
+.light-theme .text-gray-500 {
+  color: #64748b !important;
+}
+
+.light-theme .text-gray-600 {
+  color: #475569 !important;
+}
+
+/* Special classes for icons that should keep original colors in light theme */
+.icon-keep-color {
+  /* This class preserves original color in light theme */
+}
+
+.light-theme .icon-keep-color.text-white {
+  color: #fff !important;
+}
+
+.light-theme .icon-keep-color.text-gray-300 {
+  color: #e5e7eb !important;
+}
+
+.light-theme .icon-keep-color.text-gray-400 {
+  color: #9ca3af !important;
+}
+
+.light-theme .icon-keep-color.text-gray-500 {
+  color: #6b7280 !important;
+}
+
+/* Scroll indicator should be dark in light theme */
+.light-theme .border-white\/30 {
+  border-color: rgba(15, 23, 42, 0.3) !important;
+}
+
+.light-theme .bg-white\/60 {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+}
+
+/* Button inversions for light theme */
+.light-theme .bg-white {
+  background-color: #0f172a !important;
+}
+
+.light-theme .text-black {
+  color: #fff !important;
+}
+
+.light-theme .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.3) !important;
+}
+
+.light-theme .hover\:bg-white\/10:hover {
+  background-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+/* Mobile menu light theme */
+.light-theme .mobile-menu-backdrop {
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Grid pattern for loading screen */
+.grid-pattern {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.light-theme .grid-pattern {
+  background-image: 
+    linear-gradient(rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Files page theme support */
+.light-theme .bg-gray-800\/50 {
+  background-color: rgba(226, 232, 240, 0.8) !important;
+}
+
+.light-theme .bg-gray-900\/50 {
+  background-color: rgba(226, 232, 240, 0.9) !important;
+}
+
+.light-theme .bg-black\/90 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.light-theme .bg-black\/95 {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+}
+
+/* Files page breadcrumbs - override existing rules */
+.light-theme .bg-white\/5 {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.light-theme .bg-white\/10 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.light-theme .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.2) !important;
+}
+
+/* Override the conflicting rules for files page specifically */
+.light-theme .bg-white\/5:not(.endpoints-menu):not(.bg-white\/10) {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.light-theme .bg-white\/10:not(.endpoints-menu):not(.hero-social) {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Navigation specific overrides */
+.light-theme header {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.9)) !important;
+  border-top: 1px solid rgba(15, 23, 42, 0.1) !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(15, 23, 42, 0.05) !important;
+}
+
+/* LoadingScreen text should remain white for contrast */
+.light-theme .loading-screen .text-white {
+  color: #fff !important;
+}
+
+.light-theme .loading-screen .text-gray-400 {
+  color: #9ca3af !important;
+}
+
+.light-theme .loading-screen .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+/* SinkDev dropdown menu light theme */
+.light-theme .endpoints-menu {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%) !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(15, 23, 42, 0.05) !important;
+}
+
+.light-theme .endpoints-menu .text-gray-400 {
+  color: #64748b !important;
+}
+
+.light-theme .endpoints-menu .text-white {
+  color: #0f172a !important;
+}
+
+.light-theme .endpoints-menu .text-gray-500 {
+  color: #64748b !important;
+}
+
+.light-theme .endpoints-menu .text-gray-600 {
+  color: #475569 !important;
+}
+
+.light-theme .endpoints-menu .bg-gray-800\/50 {
+  background-color: rgba(226, 232, 240, 0.8) !important;
+}
+
+.light-theme .endpoints-menu .border-gray-700\/50 {
+  border-color: rgba(15, 23, 42, 0.2) !important;
+}
+
+.light-theme .endpoints-menu .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+.light-theme .endpoints-menu .bg-white\/10 {
+  background-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+.light-theme .endpoints-menu .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+/* Hero social buttons - keep dark background and white icons in light theme */
+.light-theme .bg-white\/10 {
+  background-color: rgba(15, 23, 42, 0.8) !important;
+}
+
+.light-theme .bg-white\/20 {
+  background-color: rgba(15, 23, 42, 0.9) !important;
+}
+
+.light-theme .hover\\:bg-white\/20:hover {
+  background-color: rgba(15, 23, 42, 0.9) !important;
+}
+
+/* File Preview Modal Light Theme */
+.light-theme .bg-zinc-900 {
+  background-color: #f8fafc !important;
+}
+
+.light-theme .bg-zinc-800\/50 {
+  background-color: rgba(226, 232, 240, 0.8) !important;
+}
+
+.light-theme .bg-black\/50 {
+  background-color: rgba(248, 250, 252, 0.9) !important;
+}
+
+.light-theme .text-gray-300 {
+  color: #334155 !important;
+}
+
+.light-theme .text-gray-400 {
+  color: #64748b !important;
+}
+
+.light-theme .text-gray-500 {
+  color: #64748b !important;
+}
+
+.light-theme .text-gray-600 {
+  color: #475569 !important;
+}
+
+.light-theme .border-gray-600 {
+  border-color: rgba(15, 23, 42, 0.2) !important;
+}
+
+.light-theme .bg-zinc-700 {
+  background-color: rgba(226, 232, 240, 0.8) !important;
+}
+
+.light-theme .prose-invert {
+  color: #0f172a !important;
+}
+
+.light-theme .prose-invert h1,
+.light-theme .prose-invert h2,
+.light-theme .prose-invert h3 {
+  color: #0f172a !important;
+}
+
+.light-theme .prose-invert p,
+.light-theme .prose-invert ul,
+.light-theme .prose-invert ol {
+  color: #334155 !important;
+}
+
+.light-theme .prose-invert strong {
+  color: #0f172a !important;
+}
+
+.light-theme .prose-invert em {
+  color: #475569 !important;
+}
+
+/* Force white icons on hero social buttons in light theme */
+.light-theme .bg-white\/10 .icon-keep-color,
+.light-theme .bg-white\/20 .icon-keep-color {
+  color: #fff !important;
+}
+
