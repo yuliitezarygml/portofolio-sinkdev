@@ -13,6 +13,7 @@ const Footer = lazy(() => import('./components/Footer'));
 const FilesPage = lazy(() => import('./pages/FilesPage'));
 const ApiPage = lazy(() => import('./pages/ApiPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
+const GitHubStatsPage = lazy(() => import('./pages/GitHubStatsPage'));
 
 // Компонент загрузки для Suspense
 const SuspenseLoader = () => (
@@ -49,7 +50,7 @@ function App() {
       <AnimatePresence>
         {isLoading && <LoadingScreen onComplete={handleLoadingComplete} />}
       </AnimatePresence>
-      
+
       {!isLoading && (
         <Suspense fallback={<SuspenseLoader />}>
           <Routes>
@@ -57,6 +58,7 @@ function App() {
             <Route path="/files" element={<FilesPage />} />
             <Route path="/files/*" element={<FilesPage />} />
             <Route path="/api" element={<ApiPage />} />
+            <Route path="/github" element={<GitHubStatsPage />} />
             <Route path="/admin" element={<AdminPage />} />
           </Routes>
         </Suspense>

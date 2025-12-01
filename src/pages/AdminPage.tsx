@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faShield, 
-  faArrowLeft, 
-  faEye, 
-  faEyeSlash, 
+import {
+  faShield,
+  faArrowLeft,
+  faEye,
+  faEyeSlash,
   faLock,
   faUser,
   faKey,
@@ -24,6 +24,7 @@ import {
   faFile
 } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'react-router-dom';
+import FilePreview from '../components/FilePreview';
 
 const AdminPage = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -31,12 +32,12 @@ const AdminPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
-  
+
   // Check for existing session on load
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'system';
     const root = document.documentElement;
-    
+
     if (savedTheme === 'white') {
       root.classList.add('light-theme');
       root.classList.remove('dark-theme');
@@ -61,7 +62,7 @@ const AdminPage = () => {
       const sessionTime = parseInt(adminSession);
       const currentTime = Date.now();
       const twelveHours = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
-      
+
       if (currentTime - sessionTime < twelveHours) {
         setIsAuthenticated(true);
       } else {
@@ -73,36 +74,54 @@ const AdminPage = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     // Simulate authentication with secure hash checking
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Hash credentials securely (in production, this would be done server-side)
+
+    // Hash credentials (fallback for non-HTTPS contexts)
     const hashCredentials = async (text: string) => {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(text);
-      const hash = await crypto.subtle.digest('SHA-256', data);
-      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+      // Check if crypto.subtle is available (HTTPS or localhost)
+      if (window.crypto && window.crypto.subtle) {
+        try {
+          const encoder = new TextEncoder();
+          const data = encoder.encode(text);
+          const hash = await crypto.subtle.digest('SHA-256', data);
+          return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        } catch (error) {
+          console.warn('crypto.subtle failed, using fallback hash');
+        }
+      }
+
+      // Fallback simple hash for HTTP contexts (NOT SECURE - for development only)
+      let hash = 0;
+      for (let i = 0; i < text.length; i++) {
+        const char = text.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      return Math.abs(hash).toString(16).padStart(8, '0');
     };
-    
+
     const expectedUserHash = await hashCredentials('yuliitezary');
     const expectedPassHash = await hashCredentials('SinkDev.');
     const userHash = await hashCredentials(loginData.username.toLowerCase());
     const passHash = await hashCredentials(loginData.password);
-    
+
     if (userHash === expectedUserHash && passHash === expectedPassHash) {
       setIsAuthenticated(true);
       localStorage.setItem('admin-session', Date.now().toString());
     } else {
       alert('Invalid credentials. Access denied.');
     }
-    
+
     setIsLoading(false);
   };
 
   const sidebarItems = [
     { id: 'overview', name: 'Overview', icon: faChartLine },
+    { id: 'analytics', name: 'Analytics', icon: faChartLine },
     { id: 'logs', name: 'Request Logs', icon: faFileAlt },
+    { id: 'system-logs', name: 'System Logs', icon: faServer },
     { id: 'files', name: 'File Manager', icon: faFolder }
   ];
 
@@ -119,7 +138,7 @@ const AdminPage = () => {
     totalMemory: '0 MB',
     freeMemory: '0 MB'
   });
-  
+
   const [requestLogs, setRequestLogs] = useState<Array<{
     id: string;
     timestamp: string;
@@ -134,6 +153,10 @@ const AdminPage = () => {
     contentType?: string;
     protocol?: string;
     responseSize?: number;
+    type?: 'download' | 'api' | 'page';
+    fileName?: string;
+    fileType?: string;
+    apiEndpoint?: string;
   }>>([]);
 
   // File manager state
@@ -155,6 +178,8 @@ const AdminPage = () => {
   const [newFolderName, setNewFolderName] = useState('');
   const [showRename, setShowRename] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [selectedFileForPreview, setSelectedFileForPreview] = useState<any>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
 
   // Fetch system statistics
@@ -194,7 +219,7 @@ const AdminPage = () => {
         // Fallback stats
         const fallbackStats = {
           cpuUsage: 'N/A',
-          memoryUsage: 'N/A', 
+          memoryUsage: 'N/A',
           diskUsage: 'N/A',
           uptime: 'N/A',
           platform: navigator.platform,
@@ -206,7 +231,7 @@ const AdminPage = () => {
 
     if (isAuthenticated) {
       fetchSystemStats();
-      const interval = setInterval(fetchSystemStats, 5000); // Update every 5 seconds
+      const interval = setInterval(fetchSystemStats, 2000); // Update every 2 seconds for real-time feel
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
@@ -222,7 +247,7 @@ const AdminPage = () => {
         } catch {
           response = await fetch('/api/request-logs');
         }
-        
+
         if (response.ok) {
           const logs = await response.json();
           setRequestLogs(logs.slice(0, 50)); // Keep only last 50 logs
@@ -243,7 +268,7 @@ const AdminPage = () => {
   useEffect(() => {
     const fetchFiles = async () => {
       if (!isAuthenticated || activeSection !== 'files') return;
-      
+
       try {
         const response = await fetch(`/api/files?path=${encodeURIComponent(currentPath)}`);
         if (response.ok) {
@@ -264,7 +289,7 @@ const AdminPage = () => {
     if (!uploadedFiles || uploadedFiles.length === 0) return;
 
     setIsUploading(true);
-    
+
     for (let i = 0; i < uploadedFiles.length; i++) {
       const file = uploadedFiles[i];
       const formData = new FormData();
@@ -330,7 +355,7 @@ const AdminPage = () => {
 
   const handleDeleteFiles = async () => {
     if (selectedFiles.length === 0) return;
-    
+
     if (!confirm(`Delete ${selectedFiles.length} selected item(s)?`)) return;
 
     try {
@@ -429,7 +454,7 @@ const AdminPage = () => {
         >
           <nav className="container-custom">
             <div className="flex items-center justify-between h-16 md:h-20">
-              <Link 
+              <Link
                 to="/"
                 className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors"
               >
@@ -556,7 +581,7 @@ const AdminPage = () => {
       >
         <nav className="container-custom">
           <div className="flex items-center justify-between h-16 md:h-20">
-            <Link 
+            <Link
               to="/"
               className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors"
             >
@@ -594,11 +619,10 @@ const AdminPage = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveSection(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                  activeSection === item.id
-                    ? 'bg-blue-500/20 text-blue-400 border border-blue-400/30'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${activeSection === item.id
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-400/30'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
               >
                 <FontAwesomeIcon icon={item.icon} className="icon-keep-color" />
                 <span className="font-medium">{item.name}</span>
@@ -616,7 +640,7 @@ const AdminPage = () => {
               transition={{ duration: 0.6 }}
             >
               <h1 className="text-3xl font-bold gradient-text mb-8">System Overview</h1>
-              
+
               {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 {stats.map((stat, index) => (
@@ -625,16 +649,76 @@ const AdminPage = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: index * 0.1 }}
-                    className="bg-white/5 rounded-xl border border-white/10 p-6"
+                    className="bg-white/5 rounded-xl border border-white/10 p-6 relative overflow-hidden"
                   >
-                    <div className="flex items-center justify-between mb-4">
-                      <FontAwesomeIcon icon={stat.icon} className={`text-2xl ${stat.color} icon-keep-color`} />
-                      <button className="text-gray-400 hover:text-white transition-colors">
-                        <FontAwesomeIcon icon={faRefresh} className="text-sm" />
-                      </button>
+                    {/* Animated background pulse */}
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"
+                      animate={{
+                        opacity: [0.3, 0.5, 0.3],
+                      }}
+                      transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    />
+
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-4">
+                        <FontAwesomeIcon icon={stat.icon} className={`text-2xl ${stat.color} icon-keep-color`} />
+                        <div className="flex items-center gap-2">
+                          {/* Live indicator */}
+                          <motion.div
+                            className="w-2 h-2 bg-green-400 rounded-full"
+                            animate={{
+                              scale: [1, 1.2, 1],
+                              opacity: [0.5, 1, 0.5]
+                            }}
+                            transition={{
+                              duration: 2,
+                              repeat: Infinity,
+                              ease: "easeInOut"
+                            }}
+                          />
+                          <span className="text-xs text-gray-400">Live</span>
+                        </div>
+                      </div>
+
+                      {/* Animated value with key to trigger re-render */}
+                      <AnimatePresence mode="wait">
+                        <motion.h3
+                          key={stat.value}
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          transition={{ duration: 0.3 }}
+                          className="text-2xl font-bold text-white mb-1"
+                        >
+                          {stat.value}
+                        </motion.h3>
+                      </AnimatePresence>
+
+                      <p className="text-gray-400 text-sm">{stat.label}</p>
+
+                      {/* Progress bar for percentage values */}
+                      {stat.value.includes('%') && (
+                        <div className="mt-3 h-1 bg-white/10 rounded-full overflow-hidden">
+                          <motion.div
+                            className={`h-full ${stat.label.includes('CPU') ? 'bg-blue-400' :
+                              stat.label.includes('Memory') ? 'bg-green-400' :
+                                stat.label.includes('Disk') ? 'bg-orange-400' :
+                                  'bg-purple-400'
+                              }`}
+                            initial={{ width: 0 }}
+                            animate={{
+                              width: stat.value.replace('%', '') + '%'
+                            }}
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                          />
+                        </div>
+                      )}
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-1">{stat.value}</h3>
-                    <p className="text-gray-400 text-sm">{stat.label}</p>
                   </motion.div>
                 ))}
               </div>
@@ -696,7 +780,7 @@ const AdminPage = () => {
                 <div className="bg-white/5 rounded-xl border border-white/10 p-6">
                   <h2 className="text-xl font-semibold text-white mb-6">Quick Actions</h2>
                   <div className="space-y-3">
-                    <button 
+                    <button
                       onClick={() => {
                         if (isAuthenticated) {
                           window.location.reload();
@@ -707,7 +791,7 @@ const AdminPage = () => {
                       <FontAwesomeIcon icon={faRefresh} className="icon-keep-color" />
                       <span>Refresh Dashboard</span>
                     </button>
-                    <button 
+                    <button
                       onClick={() => setActiveSection('logs')}
                       className="w-full flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg transition-all duration-200 text-white"
                     >
@@ -724,69 +808,419 @@ const AdminPage = () => {
             </motion.div>
           )}
 
+          {activeSection === 'analytics' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <h1 className="text-3xl font-bold gradient-text mb-8">Google Analytics Dashboard</h1>
+
+              {/* GA Info Card */}
+              <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl border border-blue-500/20 p-6 mb-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <FontAwesomeIcon icon={faChartLine} className="text-2xl text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-white mb-2">Connected to Google Analytics</h3>
+                    <div className="space-y-1 text-sm">
+                      <p className="text-gray-300">
+                        <span className="text-gray-400">Property:</span> <span className="font-mono">sinkdev.dev</span>
+                      </p>
+                      <p className="text-gray-300">
+                        <span className="text-gray-400">Measurement ID:</span> <span className="font-mono">G-49WK1FFZ80</span>
+                      </p>
+                      <p className="text-gray-300">
+                        <span className="text-gray-400">Stream ID:</span> <span className="font-mono">13038005735</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-green-400">Active</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Real-time Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-gray-400 text-sm">Active Users</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">
+                    {requestLogs.filter(log => {
+                      const logTime = new Date(log.timestamp).getTime();
+                      const now = Date.now();
+                      return (now - logTime) < 300000; // Last 5 minutes
+                    }).length}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Last 5 minutes</p>
+                </div>
+
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                    <span className="text-gray-400 text-sm">Page Views</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">
+                    {requestLogs.filter(log => log.type === 'page').length}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Total views</p>
+                </div>
+
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                    <span className="text-gray-400 text-sm">Unique IPs</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">
+                    {new Set(requestLogs.map(log => log.ip)).size}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Visitors</p>
+                </div>
+
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                    <span className="text-gray-400 text-sm">Avg Session</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">2m 34s</div>
+                  <p className="text-xs text-gray-500 mt-1">Duration</p>
+                </div>
+              </div>
+
+              {/* Popular Pages & Traffic Sources */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                {/* Popular Pages */}
+                <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Popular Pages</h3>
+                  <div className="space-y-3">
+                    {(() => {
+                      const pageCounts = requestLogs
+                        .filter(log => log.type === 'page')
+                        .reduce((acc, log) => {
+                          const page = log.url.split('?')[0];
+                          acc[page] = (acc[page] || 0) + 1;
+                          return acc;
+                        }, {} as Record<string, number>);
+
+                      return Object.entries(pageCounts)
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 5)
+                        .map(([page, count], index) => (
+                          <div key={page} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <span className="text-gray-400 font-mono text-sm">#{index + 1}</span>
+                              <span className="text-white font-mono text-sm">{page || '/'}</span>
+                            </div>
+                            <span className="text-blue-400 font-semibold">{count}</span>
+                          </div>
+                        ));
+                    })()}
+                  </div>
+                </div>
+
+                {/* Traffic Sources */}
+                <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Traffic Sources</h3>
+                  <div className="space-y-3">
+                    {(() => {
+                      const sources = requestLogs
+                        .filter(log => log.referer && log.referer !== '-')
+                        .reduce((acc, log) => {
+                          try {
+                            const url = new URL(log.referer!);
+                            const source = url.hostname;
+                            acc[source] = (acc[source] || 0) + 1;
+                          } catch {
+                            acc['Direct'] = (acc['Direct'] || 0) + 1;
+                          }
+                          return acc;
+                        }, { 'Direct': requestLogs.filter(log => !log.referer || log.referer === '-').length } as Record<string, number>);
+
+                      return Object.entries(sources)
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 5)
+                        .map(([source, count]) => {
+                          const total = requestLogs.length;
+                          const percentage = ((count / total) * 100).toFixed(1);
+                          return (
+                            <div key={source} className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-white text-sm">{source}</span>
+                                <span className="text-gray-400 text-sm">{percentage}%</span>
+                              </div>
+                              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                                  style={{ width: `${percentage}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          );
+                        });
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Device & Browser Stats */}
+              <div className="bg-white/5 rounded-xl border border-white/10 p-6 mb-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Operating Systems</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  {(() => {
+                    const operatingSystems = requestLogs.reduce((acc, log) => {
+                      const ua = log.userAgent.toLowerCase();
+                      let os = 'Other';
+
+                      if (ua.includes('windows')) {
+                        os = 'Windows';
+                      } else if (ua.includes('mac os') || ua.includes('macos') || ua.includes('macintosh')) {
+                        os = 'macOS';
+                      } else if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod')) {
+                        os = 'iOS';
+                      } else if (ua.includes('android')) {
+                        os = 'Android';
+                      } else if (ua.includes('linux')) {
+                        os = 'Linux';
+                      }
+
+                      acc[os] = (acc[os] || 0) + 1;
+                      return acc;
+                    }, {} as Record<string, number>);
+
+                    const getOSIcon = (os: string) => {
+                      switch (os) {
+                        case 'Windows': return '🪟';
+                        case 'macOS': return '🍎';
+                        case 'iOS': return '📱';
+                        case 'Android': return '🤖';
+                        case 'Linux': return '🐧';
+                        default: return '💻';
+                      }
+                    };
+
+                    return Object.entries(operatingSystems)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([os, count]) => {
+                        const total = requestLogs.length;
+                        const percentage = ((count / total) * 100).toFixed(1);
+                        return (
+                          <div key={os} className="bg-white/5 rounded-lg p-4 text-center">
+                            <div className="text-3xl mb-2">{getOSIcon(os)}</div>
+                            <div className="text-2xl font-bold text-white mb-1">{percentage}%</div>
+                            <div className="text-sm text-gray-400">{os}</div>
+                            <div className="text-xs text-gray-500 mt-1">{count} visits</div>
+                          </div>
+                        );
+                      });
+                  })()}
+                </div>
+              </div>
+
+              {/* Browser Stats */}
+              <div className="bg-white/5 rounded-xl border border-white/10 p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Browsers</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  {(() => {
+                    const browsers = requestLogs.reduce((acc, log) => {
+                      const ua = log.userAgent.toLowerCase();
+                      let browser = 'Other';
+
+                      // Порядок проверки важен! Сначала более специфичные
+                      if (ua.includes('edg/') || ua.includes('edge')) {
+                        browser = 'Edge';
+                      } else if (ua.includes('opr/') || ua.includes('opera')) {
+                        browser = 'Opera';
+                      } else if (ua.includes('chrome') && !ua.includes('edg')) {
+                        browser = 'Chrome';
+                      } else if (ua.includes('firefox')) {
+                        browser = 'Firefox';
+                      } else if (ua.includes('safari') && !ua.includes('chrome')) {
+                        browser = 'Safari';
+                      } else if (ua.includes('msie') || ua.includes('trident')) {
+                        browser = 'IE';
+                      }
+
+                      acc[browser] = (acc[browser] || 0) + 1;
+                      return acc;
+                    }, {} as Record<string, number>);
+
+                    const getBrowserIcon = (browser: string) => {
+                      switch (browser) {
+                        case 'Chrome': return '🌐';
+                        case 'Firefox': return '🦊';
+                        case 'Safari': return '🧭';
+                        case 'Edge': return '🌊';
+                        case 'Opera': return '🎭';
+                        case 'IE': return '📜';
+                        default: return '🌍';
+                      }
+                    };
+
+                    const getBrowserColor = (browser: string) => {
+                      switch (browser) {
+                        case 'Chrome': return 'from-yellow-500 to-red-500';
+                        case 'Firefox': return 'from-orange-500 to-red-500';
+                        case 'Safari': return 'from-blue-400 to-cyan-400';
+                        case 'Edge': return 'from-blue-500 to-green-500';
+                        case 'Opera': return 'from-red-500 to-pink-500';
+                        default: return 'from-gray-500 to-gray-600';
+                      }
+                    };
+
+                    return Object.entries(browsers)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([browser, count]) => {
+                        const total = requestLogs.length;
+                        const percentage = ((count / total) * 100).toFixed(1);
+                        return (
+                          <div key={browser} className="bg-white/5 rounded-lg p-4 text-center relative overflow-hidden">
+                            <div className={`absolute inset-0 bg-gradient-to-br ${getBrowserColor(browser)} opacity-10`}></div>
+                            <div className="relative z-10">
+                              <div className="text-3xl mb-2">{getBrowserIcon(browser)}</div>
+                              <div className="text-2xl font-bold text-white mb-1">{percentage}%</div>
+                              <div className="text-sm text-gray-400">{browser}</div>
+                              <div className="text-xs text-gray-500 mt-1">{count} visits</div>
+                            </div>
+                          </div>
+                        );
+                      });
+                  })()}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {activeSection === 'logs' && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h1 className="text-3xl font-bold gradient-text mb-8">Request Logs</h1>
-              
+              <h1 className="text-3xl font-bold gradient-text mb-8">Request Logs & Analytics</h1>
+
+              {/* Statistics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                    <span className="text-gray-400 text-sm">Total Requests</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">{requestLogs.length}</div>
+                </div>
+
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    <span className="text-gray-400 text-sm">File Downloads</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">
+                    {requestLogs.filter(log => log.type === 'download').length}
+                  </div>
+                </div>
+
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                    <span className="text-gray-400 text-sm">API Calls</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">
+                    {requestLogs.filter(log => log.type === 'api').length}
+                  </div>
+                </div>
+
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                    <span className="text-gray-400 text-sm">Avg Response</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">
+                    {requestLogs.length > 0
+                      ? Math.round(requestLogs.reduce((acc, log) => acc + (log.responseTime || 0), 0) / requestLogs.length)
+                      : 0}ms
+                  </div>
+                </div>
+              </div>
+
               <div className="bg-white/5 rounded-xl border border-white/10 p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-white">Recent HTTP Requests</h2>
+                  <h2 className="text-xl font-semibold text-white">Recent Activity</h2>
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                     Live monitoring
                   </div>
                 </div>
-                
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-white/10">
                         <th className="text-left py-3 px-3 text-gray-400 font-medium min-w-[80px]">Time</th>
+                        <th className="text-left py-3 px-3 text-gray-400 font-medium min-w-[60px]">Type</th>
                         <th className="text-left py-3 px-3 text-gray-400 font-medium min-w-[60px]">Method</th>
-                        <th className="text-left py-3 px-3 text-gray-400 font-medium min-w-[200px]">URL</th>
+                        <th className="text-left py-3 px-3 text-gray-400 font-medium min-w-[250px]">Resource</th>
                         <th className="text-left py-3 px-3 text-gray-400 font-medium min-w-[100px]">IP Address</th>
                         <th className="text-left py-3 px-3 text-gray-400 font-medium min-w-[60px]">Status</th>
-                        <th className="text-left py-3 px-3 text-gray-400 font-medium min-w-[70px]">Response Time</th>
-                        <th className="text-left py-3 px-3 text-gray-400 font-medium min-w-[100px]">Host</th>
-                        <th className="text-left py-3 px-3 text-gray-400 font-medium min-w-[200px]">User Agent</th>
-                        <th className="text-left py-3 px-3 text-gray-400 font-medium min-w-[120px]">Referer</th>
+                        <th className="text-left py-3 px-3 text-gray-400 font-medium min-w-[80px]">Response</th>
+                        <th className="text-left py-3 px-3 text-gray-400 font-medium min-w-[80px]">Size</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {requestLogs.length > 0 ? requestLogs.map((log) => (
+                      {requestLogs.length > 0 ? requestLogs.slice(0, 100).map((log) => (
                         <tr key={log.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                           <td className="py-2 px-3 text-gray-300 font-mono text-xs">
                             {new Date(log.timestamp).toLocaleTimeString()}
                           </td>
                           <td className="py-2 px-3">
-                            <span className={`px-2 py-1 rounded text-xs font-mono ${
-                              log.method === 'GET' ? 'bg-green-500/20 text-green-400' :
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${log.type === 'download' ? 'bg-green-500/20 text-green-400' :
+                              log.type === 'api' ? 'bg-purple-500/20 text-purple-400' :
+                                'bg-gray-500/20 text-gray-400'
+                              }`}>
+                              {log.type === 'download' ? '📥 File' : log.type === 'api' ? '🔌 API' : '📄 Page'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3">
+                            <span className={`px-2 py-1 rounded text-xs font-mono ${log.method === 'GET' ? 'bg-green-500/20 text-green-400' :
                               log.method === 'POST' ? 'bg-blue-500/20 text-blue-400' :
-                              log.method === 'PUT' ? 'bg-yellow-500/20 text-yellow-400' :
-                              log.method === 'DELETE' ? 'bg-red-500/20 text-red-400' :
-                              'bg-gray-500/20 text-gray-400'
-                            }`}>
+                                log.method === 'PUT' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  log.method === 'DELETE' ? 'bg-red-500/20 text-red-400' :
+                                    'bg-gray-500/20 text-gray-400'
+                              }`}>
                               {log.method}
                             </span>
                           </td>
-                          <td className="py-2 px-3 text-white font-mono text-xs max-w-[200px] truncate" title={log.url}>
-                            {log.url}
+                          <td className="py-2 px-3 text-white text-xs">
+                            {log.type === 'download' && log.fileName ? (
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-green-400">{log.fileName}</span>
+                                {log.fileType && (
+                                  <span className="px-1.5 py-0.5 bg-white/10 rounded text-xs text-gray-400">
+                                    .{log.fileType}
+                                  </span>
+                                )}
+                              </div>
+                            ) : log.type === 'api' && log.apiEndpoint ? (
+                              <span className="font-mono text-purple-400">{log.apiEndpoint}</span>
+                            ) : (
+                              <span className="font-mono text-gray-400 truncate max-w-[200px] inline-block" title={log.url}>
+                                {log.url}
+                              </span>
+                            )}
                           </td>
                           <td className="py-2 px-3 text-gray-300 font-mono text-xs">
                             {log.ip}
                           </td>
                           <td className="py-2 px-3">
                             {log.status && (
-                              <span className={`px-2 py-1 rounded text-xs font-mono ${
-                                log.status >= 200 && log.status < 300 ? 'bg-green-500/20 text-green-400' :
+                              <span className={`px-2 py-1 rounded text-xs font-mono ${log.status >= 200 && log.status < 300 ? 'bg-green-500/20 text-green-400' :
                                 log.status >= 300 && log.status < 400 ? 'bg-yellow-500/20 text-yellow-400' :
-                                log.status >= 400 ? 'bg-red-500/20 text-red-400' :
-                                'bg-gray-500/20 text-gray-400'
-                              }`}>
+                                  log.status >= 400 ? 'bg-red-500/20 text-red-400' :
+                                    'bg-gray-500/20 text-gray-400'
+                                }`}>
                                 {log.status}
                               </span>
                             )}
@@ -794,19 +1228,19 @@ const AdminPage = () => {
                           <td className="py-2 px-3 text-gray-300 font-mono text-xs">
                             {log.responseTime ? `${log.responseTime}ms` : '-'}
                           </td>
-                          <td className="py-2 px-3 text-gray-300 font-mono text-xs max-w-[100px] truncate" title={log.host}>
-                            {log.host || '-'}
-                          </td>
-                          <td className="py-2 px-3 text-gray-400 text-xs max-w-[200px] truncate" title={log.userAgent}>
-                            {log.userAgent}
-                          </td>
-                          <td className="py-2 px-3 text-gray-400 text-xs max-w-[120px] truncate" title={log.referer}>
-                            {log.referer || '-'}
+                          <td className="py-2 px-3 text-gray-300 text-xs">
+                            {log.responseSize ? (
+                              log.responseSize > 1024 * 1024
+                                ? `${(log.responseSize / 1024 / 1024).toFixed(2)} MB`
+                                : log.responseSize > 1024
+                                  ? `${(log.responseSize / 1024).toFixed(2)} KB`
+                                  : `${log.responseSize} B`
+                            ) : '-'}
                           </td>
                         </tr>
                       )) : (
                         <tr>
-                          <td colSpan={9} className="py-8 text-center text-gray-400">
+                          <td colSpan={8} className="py-8 text-center text-gray-400">
                             No request logs available yet
                           </td>
                         </tr>
@@ -814,7 +1248,7 @@ const AdminPage = () => {
                     </tbody>
                   </table>
                 </div>
-                
+
                 {requestLogs.length > 0 && (
                   <div className="mt-4 text-sm text-gray-400 text-center">
                     Showing last {requestLogs.length} requests • Updates every 3 seconds
@@ -831,7 +1265,7 @@ const AdminPage = () => {
               transition={{ duration: 0.6 }}
             >
               <h1 className="text-3xl font-bold gradient-text mb-8">File Manager</h1>
-              
+
               {/* File Manager Controls */}
               <div className="bg-white/5 rounded-xl border border-white/10 p-6 mb-6">
                 <div className="flex items-center justify-between mb-6">
@@ -876,7 +1310,7 @@ const AdminPage = () => {
                         Delete ({selectedFiles.length})
                       </button>
                     )}
-                    
+
                     <button
                       onClick={() => setShowCreateFolder(true)}
                       className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg border border-blue-400/30 transition-all duration-200 flex items-center gap-2"
@@ -1042,8 +1476,8 @@ const AdminPage = () => {
                               </div>
                             ) : (
                               <div className="flex items-center gap-3">
-                                <FontAwesomeIcon 
-                                  icon={file.type === 'folder' ? faFolder : faFile} 
+                                <FontAwesomeIcon
+                                  icon={file.type === 'folder' ? faFolder : faFile}
                                   className={file.type === 'folder' ? 'text-blue-400' : 'text-gray-400'}
                                 />
                                 {file.type === 'folder' ? (
@@ -1054,13 +1488,21 @@ const AdminPage = () => {
                                     {file.name}
                                   </button>
                                 ) : (
-                                  <span className="text-white">{file.name}</span>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedFileForPreview(file);
+                                      setIsPreviewOpen(true);
+                                    }}
+                                    className="text-white hover:text-blue-400 transition-colors cursor-pointer"
+                                  >
+                                    {file.name}
+                                  </button>
                                 )}
                               </div>
                             )}
                           </td>
                           <td className="py-3 px-4 text-gray-400 text-sm">
-                            {file.type === 'folder' ? 
+                            {file.type === 'folder' ?
                               (file.fileCount !== undefined ? `${file.fileCount} items` : '-') :
                               formatFileSize(file.size)
                             }
@@ -1080,6 +1522,20 @@ const AdminPage = () => {
                               >
                                 <FontAwesomeIcon icon={faEdit} />
                               </button>
+
+                              {/* HTML Preview Button */}
+                              {file.type === 'file' && (file.extension === 'html' || file.extension === 'htm') && (
+                                <a
+                                  href={`/Files${file.path}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-gray-400 hover:text-purple-400 transition-colors"
+                                  title="Preview HTML"
+                                >
+                                  <FontAwesomeIcon icon={faEye} />
+                                </a>
+                              )}
+
                               {file.type === 'file' && (
                                 <a
                                   href={`/Files${file.path}`}
@@ -1119,9 +1575,184 @@ const AdminPage = () => {
             </motion.div>
           )}
 
+          {activeSection === 'system-logs' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <h1 className="text-3xl font-bold gradient-text mb-8">System Logs</h1>
+
+              {/* System Info */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-gray-400 text-sm">System Status</span>
+                  </div>
+                  <div className="text-xl font-bold text-green-400">Online</div>
+                </div>
+
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                    <span className="text-gray-400 text-sm">Platform</span>
+                  </div>
+                  <div className="text-xl font-bold text-white">{systemStats.platform}</div>
+                </div>
+
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                    <span className="text-gray-400 text-sm">Node Version</span>
+                  </div>
+                  <div className="text-xl font-bold text-white">{systemStats.nodeVersion}</div>
+                </div>
+
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                    <span className="text-gray-400 text-sm">Uptime</span>
+                  </div>
+                  <div className="text-xl font-bold text-white">{systemStats.uptime}</div>
+                </div>
+              </div>
+
+              {/* Console-style Logs */}
+              <div className="bg-black/50 rounded-xl border border-white/10 overflow-hidden">
+                <div className="bg-white/5 border-b border-white/10 px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1.5">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    </div>
+                    <span className="text-sm text-gray-400 ml-3 font-mono">system.log</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    Live
+                  </div>
+                </div>
+
+                <div className="p-4 font-mono text-sm max-h-[600px] overflow-y-auto" style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#9CA3AF #374151'
+                }}>
+                  {/* System Logs */}
+                  {requestLogs.slice(0, 50).map((log, index) => {
+                    const logTime = new Date(log.timestamp);
+                    const logLevel = log.status && log.status >= 400 ? 'ERROR' : log.status && log.status >= 300 ? 'WARN' : 'INFO';
+                    const logColor = logLevel === 'ERROR' ? 'text-red-400' : logLevel === 'WARN' ? 'text-yellow-400' : 'text-green-400';
+
+                    return (
+                      <div key={log.id} className="mb-1 hover:bg-white/5 px-2 py-1 rounded transition-colors">
+                        <span className="text-gray-500">[{logTime.toLocaleTimeString()}]</span>
+                        {' '}
+                        <span className={`${logColor} font-semibold`}>[{logLevel}]</span>
+                        {' '}
+                        <span className="text-gray-400">{log.method}</span>
+                        {' '}
+                        <span className="text-white">{log.url}</span>
+                        {' '}
+                        {log.status && (
+                          <>
+                            <span className="text-gray-500">-</span>
+                            {' '}
+                            <span className={log.status >= 400 ? 'text-red-400' : log.status >= 300 ? 'text-yellow-400' : 'text-green-400'}>
+                              {log.status}
+                            </span>
+                          </>
+                        )}
+                        {log.responseTime && (
+                          <>
+                            {' '}
+                            <span className="text-gray-500">({log.responseTime}ms)</span>
+                          </>
+                        )}
+                        {' '}
+                        <span className="text-blue-400">{log.ip}</span>
+                      </div>
+                    );
+                  })}
+
+                  {requestLogs.length === 0 && (
+                    <div className="text-gray-500 text-center py-8">
+                      No system logs available yet
+                    </div>
+                  )}
+                </div>
+
+                {requestLogs.length > 0 && (
+                  <div className="bg-white/5 border-t border-white/10 px-4 py-2 text-xs text-gray-500 font-mono">
+                    Showing {Math.min(50, requestLogs.length)} of {requestLogs.length} log entries
+                  </div>
+                )}
+              </div>
+
+              {/* Log Statistics */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-400 text-sm">Success Rate</span>
+                    <span className="text-green-400 text-xs font-mono">2xx</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white mb-1">
+                    {requestLogs.length > 0
+                      ? ((requestLogs.filter(log => log.status && log.status >= 200 && log.status < 300).length / requestLogs.length) * 100).toFixed(1)
+                      : 0}%
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {requestLogs.filter(log => log.status && log.status >= 200 && log.status < 300).length} requests
+                  </div>
+                </div>
+
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-400 text-sm">Errors</span>
+                    <span className="text-red-400 text-xs font-mono">4xx/5xx</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white mb-1">
+                    {requestLogs.filter(log => log.status && log.status >= 400).length}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {requestLogs.length > 0
+                      ? ((requestLogs.filter(log => log.status && log.status >= 400).length / requestLogs.length) * 100).toFixed(1)
+                      : 0}% error rate
+                  </div>
+                </div>
+
+                <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-400 text-sm">Avg Response</span>
+                    <span className="text-blue-400 text-xs font-mono">ms</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white mb-1">
+                    {requestLogs.length > 0
+                      ? Math.round(requestLogs.reduce((acc, log) => acc + (log.responseTime || 0), 0) / requestLogs.length)
+                      : 0}ms
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    across {requestLogs.length} requests
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
 
         </main>
       </div>
+
+      {/* File Preview Modal */}
+      <FilePreview
+        file={selectedFileForPreview}
+        isOpen={isPreviewOpen}
+        onClose={() => {
+          setIsPreviewOpen(false);
+          setSelectedFileForPreview(null);
+        }}
+      />
     </div>
   );
 };

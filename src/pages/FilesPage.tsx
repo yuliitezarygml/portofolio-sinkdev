@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faFile, 
-  faFileImage, 
-  faFileVideo, 
-  faFileAudio, 
-  faFileCode, 
-  faFilePdf, 
+import {
+  faFile,
+  faFileImage,
+  faFileVideo,
+  faFileAudio,
+  faFileCode,
+  faFilePdf,
   faFileZipper,
   faDownload,
   faFolder,
@@ -26,12 +26,12 @@ import FilePreview from '../components/FilePreview';
 const FilesPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Initialize theme from localStorage on component mount
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'system';
     const root = document.documentElement;
-    
+
     if (savedTheme === 'white') {
       root.classList.add('light-theme');
       root.classList.remove('dark-theme');
@@ -50,13 +50,13 @@ const FilesPage = () => {
       }
     }
   }, []);
-  
+
   // Получаем текущий путь из URL
   const getCurrentPath = () => {
     const urlPath = location.pathname.replace('/files', '');
     return urlPath === '' ? '/' : urlPath;
   };
-  
+
   const [currentPath, setCurrentPath] = useState(getCurrentPath());
   const { files, loading } = useRealTimeFiles(currentPath);
   const [previewFile, setPreviewFile] = useState<FileSystemItem | null>(null);
@@ -82,17 +82,17 @@ const FilesPage = () => {
   // Мемоизированная функция сканирования файлов
   const scanAllFiles = useCallback(async () => {
     const scannedFiles: FileSystemItem[] = [];
-    
+
     const scanDirectory = async (path: string) => {
       try {
         const response = await fetch(`/api/files?path=${encodeURIComponent(path)}`);
         if (!response.ok) return;
-        
+
         const dirFiles = await response.json();
-        
+
         for (const file of dirFiles) {
           scannedFiles.push(file);
-          
+
           if (file.type === 'folder') {
             await scanDirectory(file.path);
           }
@@ -101,7 +101,7 @@ const FilesPage = () => {
         console.error('Error scanning directory:', error);
       }
     };
-    
+
     await scanDirectory('/');
     setAllFiles(scannedFiles);
   }, []);
@@ -115,7 +115,7 @@ const FilesPage = () => {
   const getFilteredFiles = useMemo(() => {
     if (searchQuery) {
       // При поиске показываем только файлы, НЕ папки
-      return allFiles.filter(file => 
+      return allFiles.filter(file =>
         file.type === 'file' && (
           file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           file.extension?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -146,7 +146,7 @@ const FilesPage = () => {
   const downloadFolder = async (folderPath: string) => {
     try {
       const url = `/api/download-folder?path=${encodeURIComponent(folderPath)}`;
-      
+
       // Создаем временную ссылку для скачивания
       const link = document.createElement('a');
       link.href = url;
@@ -197,11 +197,11 @@ const FilesPage = () => {
 
   const getFileIcon = (extension?: string, type?: string) => {
     if (type === 'folder') return faFolder;
-    
+
     if (!extension) return faFile;
-    
+
     const ext = extension.toLowerCase();
-    
+
     if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return faFileImage;
     if (['mp4', 'avi', 'mov', 'wmv', 'flv'].includes(ext)) return faFileVideo;
     if (['mp3', 'wav', 'flac', 'aac'].includes(ext)) return faFileAudio;
@@ -209,13 +209,13 @@ const FilesPage = () => {
     if (ext === 'pdf') return faFilePdf;
     if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return faFileZipper;
     if (['exe', 'msi', 'dmg', 'app'].includes(ext)) return faFile;
-    
+
     return faFile;
   };
 
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return '';
-    
+
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
@@ -248,7 +248,7 @@ const FilesPage = () => {
         <nav className="container-custom">
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Back Button */}
-            <Link 
+            <Link
               to="/"
               className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors"
             >
@@ -289,11 +289,10 @@ const FilesPage = () => {
                           handleBreadcrumbClick(crumb.path);
                           setSearchQuery('');
                         }}
-                        className={`px-3 py-1 rounded transition-all duration-200 ${
-                          index === array.length - 1 
-                            ? 'text-white font-medium bg-white/10' 
+                        className={`px-3 py-1 rounded transition-all duration-200 ${index === array.length - 1
+                            ? 'text-white font-medium bg-white/10'
                             : 'text-gray-300 hover:text-white hover:bg-white/5'
-                        }`}
+                          }`}
                       >
                         {crumb.name === 'Files' ? 'Root' : crumb.name}
                       </button>
@@ -308,8 +307,8 @@ const FilesPage = () => {
               {/* Search */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 <div className="relative">
-                  <FontAwesomeIcon 
-                    icon={faSearch} 
+                  <FontAwesomeIcon
+                    icon={faSearch}
                     className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm icon-keep-color"
                   />
                   <input
@@ -353,18 +352,17 @@ const FilesPage = () => {
                     key={file.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ 
-                      duration: 0.6, 
-                      delay: (index + 3) * 0.1 
+                    transition={{
+                      duration: 0.6,
+                      delay: (index + 3) * 0.1
                     }}
                     className="group border border-white/10 rounded-lg p-4 hover:border-white/20 hover:bg-white/5 transition-all duration-200"
                   >
                     <div className="flex items-center justify-between gap-4">
                       {/* File Info */}
-                      <div 
-                        className={`flex items-center gap-4 flex-1 min-w-0 ${
-                          file.type === 'folder' && !searchQuery ? 'cursor-pointer' : ''
-                        }`}
+                      <div
+                        className={`flex items-center gap-4 flex-1 min-w-0 ${file.type === 'folder' && !searchQuery ? 'cursor-pointer' : ''
+                          }`}
                         onClick={() => {
                           if (file.type === 'folder' && !searchQuery) {
                             handleFolderClick(file.path);
@@ -372,22 +370,20 @@ const FilesPage = () => {
                         }}
                       >
                         <div className="flex-shrink-0">
-                          <FontAwesomeIcon 
-                            icon={getFileIcon(file.extension, file.type)} 
-                            className={`text-2xl ${
-                              file.type === 'folder' 
-                                ? 'text-blue-400' 
+                          <FontAwesomeIcon
+                            icon={getFileIcon(file.extension, file.type)}
+                            className={`text-2xl ${file.type === 'folder'
+                                ? 'text-blue-400'
                                 : 'text-gray-400'
-                            }`} 
+                              }`}
                           />
                         </div>
-                        
+
                         <div className="flex-1 min-w-0">
-                          <h3 className={`text-base font-medium truncate mb-1 ${
-                            file.type === 'folder' 
-                              ? 'text-blue-300 hover:text-blue-200' 
+                          <h3 className={`text-base font-medium truncate mb-1 ${file.type === 'folder'
+                              ? 'text-blue-300 hover:text-blue-200'
                               : 'text-white'
-                          }`}>
+                            }`}>
                             {file.name}
                           </h3>
                           <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -423,6 +419,22 @@ const FilesPage = () => {
                                 <FontAwesomeIcon icon={faEye} className="text-sm" />
                               </button>
                             )}
+
+                            {/* HTML Preview in new tab */}
+                            {(file.extension === 'html' || file.extension === 'htm') && (
+                              <a
+                                href={`/Files${file.path}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 border border-purple-500/20 transition-colors touch-manipulation"
+                                style={{ minHeight: '36px', minWidth: '36px' }}
+                                aria-label="Open HTML"
+                                title="Open in new tab"
+                              >
+                                <FontAwesomeIcon icon={faEye} className="text-sm" />
+                              </a>
+                            )}
+
                             {/* Download button for all files */}
                             <a
                               href={`/Files${file.path}`}
@@ -456,7 +468,7 @@ const FilesPage = () => {
       </main>
 
       {/* File Preview Modal */}
-      <FilePreview 
+      <FilePreview
         file={previewFile}
         isOpen={isPreviewOpen}
         onClose={closePreview}

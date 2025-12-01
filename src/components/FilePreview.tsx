@@ -25,16 +25,16 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
     const checkTheme = () => {
       setIsLightTheme(document.documentElement.classList.contains('light-theme'));
     };
-    
+
     checkTheme();
-    
+
     // Listen for theme changes
     const observer = new MutationObserver(checkTheme);
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ['class']
     });
-    
+
     return () => observer.disconnect();
   }, []);
 
@@ -57,7 +57,7 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
 
     try {
       const response = await fetch(`/Files${file.path}`);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to load file: ${response.status}`);
       }
@@ -123,8 +123,8 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
           wrapLines={false}
           lineProps={(lineNumber) => ({
             style: {
-              backgroundColor: lineNumber % 2 === 0 
-                ? 'rgba(255, 255, 255, 0.04)' 
+              backgroundColor: lineNumber % 2 === 0
+                ? 'rgba(255, 255, 255, 0.04)'
                 : 'transparent',
               transition: 'background-color 0.15s ease',
               cursor: 'text',
@@ -135,8 +135,8 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
               e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
             },
             onMouseLeave: (e) => {
-              e.target.style.backgroundColor = lineNumber % 2 === 0 
-                ? 'rgba(255, 255, 255, 0.04)' 
+              e.target.style.backgroundColor = lineNumber % 2 === 0
+                ? 'rgba(255, 255, 255, 0.04)'
                 : 'transparent';
             }
           })}
@@ -158,8 +158,8 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
     if (isImageFile(file.extension)) {
       return (
         <div className="h-full overflow-auto flex items-center justify-center">
-          <img 
-            src={`/Files${file.path}`} 
+          <img
+            src={`/Files${file.path}`}
             alt={file.name}
             className="max-w-full max-h-full object-contain rounded-lg"
             onError={(e) => setError('Failed to load image')}
@@ -171,7 +171,7 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
     if (isPdfFile(file.extension)) {
       return (
         <div className="h-full overflow-hidden">
-          <iframe 
+          <iframe
             src={`/Files${file.path}`}
             className="w-full h-full rounded-lg border-0"
             title={file.name}
@@ -183,57 +183,165 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
     if (isMarkdownFile(file.extension)) {
       return (
         <div className="h-full flex flex-col">
-          <div 
-            className="h-full p-6 bg-zinc-800/50 rounded-lg prose prose-invert prose-sm max-w-none"
+          <div
+            className="h-full p-8 bg-gradient-to-br from-zinc-900/50 to-zinc-800/30 rounded-lg overflow-auto"
             style={{
-              overflow: 'auto',
               scrollbarWidth: 'thin',
               scrollbarColor: '#9CA3AF #374151'
             }}
           >
-            <ReactMarkdown
-              components={{
-                code({node, inline, className, children, ...props}) {
-                  const match = /language-(\w+)/.exec(className || '');
-                  return !inline && match ? (
-                    <SyntaxHighlighter
-                      style={isLightTheme ? vs : vscDarkPlus}
-                      language={match[1]}
-                      PreTag="div"
-                      className="rounded-lg"
-                      {...props}
-                    >
-                      {String(children).replace(/\n$/, '')}
-                    </SyntaxHighlighter>
-                  ) : (
-                    <code className="bg-zinc-700 px-1 py-0.5 rounded text-sm font-mono" {...props}>
+            <div className="max-w-4xl mx-auto">
+              <ReactMarkdown
+                components={{
+                  code({ node, inline, className, children, ...props }) {
+                    const match = /language-(\w+)/.exec(className || '');
+                    return !inline && match ? (
+                      <div className="my-4 rounded-lg overflow-hidden border border-white/10">
+                        <div className="bg-zinc-800/80 px-4 py-2 border-b border-white/10 flex items-center justify-between">
+                          <span className="text-xs text-gray-400 font-mono uppercase">{match[1]}</span>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(String(children))}
+                            className="text-xs text-gray-400 hover:text-white transition-colors px-2 py-1 rounded bg-white/5 hover:bg-white/10"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                        <SyntaxHighlighter
+                          style={isLightTheme ? vs : vscDarkPlus}
+                          language={match[1]}
+                          PreTag="div"
+                          customStyle={{
+                            margin: 0,
+                            padding: '1rem',
+                            background: 'rgba(0, 0, 0, 0.3)',
+                            fontSize: '14px'
+                          }}
+                          {...props}
+                        >
+                          {String(children).replace(/\n$/, '')}
+                        </SyntaxHighlighter>
+                      </div>
+                    ) : (
+                      <code className="bg-blue-500/10 text-blue-300 px-1.5 py-0.5 rounded text-sm font-mono border border-blue-500/20" {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+                  h1: ({ children }) => (
+                    <h1 className="text-4xl font-bold text-white mb-6 pb-4 border-b-2 border-gradient-to-r from-blue-500 to-purple-500 mt-8 first:mt-0">
                       {children}
-                    </code>
-                  );
-                },
-                h1: ({children}) => <h1 className="text-2xl font-bold text-white mb-4 border-b border-gray-600 pb-2">{children}</h1>,
-                h2: ({children}) => <h2 className="text-xl font-semibold text-white mb-3 mt-6">{children}</h2>,
-                h3: ({children}) => <h3 className="text-lg font-medium text-white mb-2 mt-4">{children}</h3>,
-                p: ({children}) => <p className="text-gray-300 mb-4 leading-relaxed">{children}</p>,
-                ul: ({children}) => <ul className="text-gray-300 mb-4 pl-6 space-y-1">{children}</ul>,
-                ol: ({children}) => <ol className="text-gray-300 mb-4 pl-6 space-y-1">{children}</ol>,
-                li: ({children}) => <li className="list-disc">{children}</li>,
-                blockquote: ({children}) => (
-                  <blockquote className="border-l-4 border-blue-500 pl-4 py-2 bg-blue-500/10 rounded-r-lg mb-4 text-gray-300 italic">
-                    {children}
-                  </blockquote>
-                ),
-                strong: ({children}) => <strong className="text-white font-semibold">{children}</strong>,
-                em: ({children}) => <em className="text-gray-200 italic">{children}</em>,
-                a: ({children, href}) => (
-                  <a href={href} className="text-blue-400 hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">
-                    {children}
-                  </a>
-                ),
-              }}
-            >
-              {content}
-            </ReactMarkdown>
+                    </h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 className="text-3xl font-semibold text-white mb-4 mt-8 pb-2 border-b border-white/20">
+                      {children}
+                    </h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 className="text-2xl font-medium text-white mb-3 mt-6">
+                      {children}
+                    </h3>
+                  ),
+                  h4: ({ children }) => (
+                    <h4 className="text-xl font-medium text-white mb-2 mt-4">
+                      {children}
+                    </h4>
+                  ),
+                  p: ({ children }) => (
+                    <p className="text-gray-300 mb-4 leading-relaxed text-base">
+                      {children}
+                    </p>
+                  ),
+                  ul: ({ children }) => (
+                    <ul className="text-gray-300 mb-4 pl-6 space-y-2">
+                      {children}
+                    </ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="text-gray-300 mb-4 pl-6 space-y-2 list-decimal">
+                      {children}
+                    </ol>
+                  ),
+                  li: ({ children }) => (
+                    <li className="list-disc marker:text-blue-400">
+                      {children}
+                    </li>
+                  ),
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-4 border-blue-500 pl-4 py-3 my-4 bg-blue-500/5 rounded-r-lg text-gray-300 italic backdrop-blur-sm">
+                      {children}
+                    </blockquote>
+                  ),
+                  strong: ({ children }) => (
+                    <strong className="text-white font-semibold">
+                      {children}
+                    </strong>
+                  ),
+                  em: ({ children }) => (
+                    <em className="text-gray-200 italic">
+                      {children}
+                    </em>
+                  ),
+                  a: ({ children, href }) => (
+                    <a
+                      href={href}
+                      className="text-blue-400 hover:text-blue-300 underline decoration-blue-400/50 hover:decoration-blue-300 transition-colors inline-flex items-center gap-1"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {children}
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  ),
+                  table: ({ children }) => (
+                    <div className="my-4 overflow-x-auto rounded-lg border border-white/10">
+                      <table className="w-full text-sm">
+                        {children}
+                      </table>
+                    </div>
+                  ),
+                  thead: ({ children }) => (
+                    <thead className="bg-white/5 border-b border-white/10">
+                      {children}
+                    </thead>
+                  ),
+                  tbody: ({ children }) => (
+                    <tbody className="divide-y divide-white/5">
+                      {children}
+                    </tbody>
+                  ),
+                  tr: ({ children }) => (
+                    <tr className="hover:bg-white/5 transition-colors">
+                      {children}
+                    </tr>
+                  ),
+                  th: ({ children }) => (
+                    <th className="px-4 py-3 text-left text-white font-semibold">
+                      {children}
+                    </th>
+                  ),
+                  td: ({ children }) => (
+                    <td className="px-4 py-3 text-gray-300">
+                      {children}
+                    </td>
+                  ),
+                  hr: () => (
+                    <hr className="my-8 border-t border-white/20" />
+                  ),
+                  img: ({ src, alt }) => (
+                    <img
+                      src={src}
+                      alt={alt || ''}
+                      className="max-w-full h-auto rounded-lg border border-white/10 my-4 shadow-lg"
+                    />
+                  ),
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+            </div>
           </div>
         </div>
       );
@@ -265,8 +373,8 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
             wrapLines={false}
             lineProps={(lineNumber) => ({
               style: {
-                backgroundColor: lineNumber % 2 === 0 
-                  ? 'rgba(255, 255, 255, 0.04)' 
+                backgroundColor: lineNumber % 2 === 0
+                  ? 'rgba(255, 255, 255, 0.04)'
                   : 'transparent',
                 transition: 'background-color 0.15s ease',
                 cursor: 'text',
@@ -277,8 +385,8 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
                 e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
               },
               onMouseLeave: (e) => {
-                e.target.style.backgroundColor = lineNumber % 2 === 0 
-                  ? 'rgba(255, 255, 255, 0.04)' 
+                e.target.style.backgroundColor = lineNumber % 2 === 0
+                  ? 'rgba(255, 255, 255, 0.04)'
                   : 'transparent';
               }
             })}
@@ -329,8 +437,8 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
               wrapLines={false}
               lineProps={(lineNumber) => ({
                 style: {
-                  backgroundColor: lineNumber % 2 === 0 
-                    ? 'rgba(255, 255, 255, 0.04)' 
+                  backgroundColor: lineNumber % 2 === 0
+                    ? 'rgba(255, 255, 255, 0.04)'
                     : 'transparent',
                   transition: 'background-color 0.15s ease',
                   cursor: 'text',
@@ -341,8 +449,8 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
                   e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
                 },
                 onMouseLeave: (e) => {
-                  e.target.style.backgroundColor = lineNumber % 2 === 0 
-                    ? 'rgba(255, 255, 255, 0.04)' 
+                  e.target.style.backgroundColor = lineNumber % 2 === 0
+                    ? 'rgba(255, 255, 255, 0.04)'
                     : 'transparent';
                 }
               })}
@@ -355,7 +463,7 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
 
       return (
         <div className="h-full flex flex-col">
-          <div 
+          <div
             className="h-full p-4 bg-black/50 rounded-lg text-sm text-gray-300 font-mono leading-relaxed relative"
             style={{
               overflow: 'auto',
@@ -397,7 +505,7 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
 
   const getFileIcon = () => {
     if (!file) return faFileCode;
-    
+
     if (isImageFile(file.extension)) return faFileImage;
     if (isPdfFile(file.extension)) return faFilePdf;
     return faFileCode;
@@ -405,7 +513,7 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
 
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return '';
-    
+
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
@@ -462,86 +570,85 @@ const FilePreview = ({ file, isOpen, onClose }: FilePreviewProps) => {
       <AnimatePresence>
         {isOpen && file && (
           <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
-          onClick={onClose}
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="w-full max-w-6xl h-[90vh] bg-zinc-900 rounded-xl border border-white/20 flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+            onClick={onClose}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <div className="flex items-center gap-3">
-                <FontAwesomeIcon icon={getFileIcon()} className="text-xl text-gray-400" />
-                <div>
-                  <h3 className="text-lg font-medium text-white">{file.name}</h3>
-                  <div className="flex items-center gap-4 text-sm text-gray-400">
-                    {file.size && <span>{formatFileSize(file.size)}</span>}
-                    {file.extension && <span className="uppercase">{file.extension}</span>}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-6xl h-[90vh] bg-zinc-900 rounded-xl border border-white/20 flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <FontAwesomeIcon icon={getFileIcon()} className="text-xl text-gray-400" />
+                  <div>
+                    <h3 className="text-lg font-medium text-white">{file.name}</h3>
+                    <div className="flex items-center gap-4 text-sm text-gray-400">
+                      {file.size && <span>{formatFileSize(file.size)}</span>}
+                      {file.extension && <span className="uppercase">{file.extension}</span>}
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {/* Кнопка источника для файлов с превью */}
-                {hasPreviewMode(file.extension) && (
-                  <button
-                    onClick={() => setShowSource(!showSource)}
-                    className={`p-2 rounded-lg transition-colors ${
-                      showSource 
-                        ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' 
-                        : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
-                    }`}
-                    title={showSource ? "Show preview" : "Show source"}
-                  >
-                    <FontAwesomeIcon icon={faCode} />
-                  </button>
-                )}
-                <a
-                  href={`/Files${file.path}`}
-                  download={file.name}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                  title="Download file"
-                >
-                  <FontAwesomeIcon icon={faDownload} />
-                </a>
-                <button
-                  onClick={onClose}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                >
-                  <FontAwesomeIcon icon={faX} />
-                </button>
-              </div>
-            </div>
 
-            {/* Content */}
-            <div className="flex-1 p-4 min-h-0">
-              {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <div className="inline-block w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin mb-4"></div>
-                    <p className="text-gray-400">Loading file...</p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  {/* Кнопка источника для файлов с превью */}
+                  {hasPreviewMode(file.extension) && (
+                    <button
+                      onClick={() => setShowSource(!showSource)}
+                      className={`p-2 rounded-lg transition-colors ${showSource
+                          ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                          : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+                        }`}
+                      title={showSource ? "Show preview" : "Show source"}
+                    >
+                      <FontAwesomeIcon icon={faCode} />
+                    </button>
+                  )}
+                  <a
+                    href={`/Files${file.path}`}
+                    download={file.name}
+                    className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                    title="Download file"
+                  >
+                    <FontAwesomeIcon icon={faDownload} />
+                  </a>
+                  <button
+                    onClick={onClose}
+                    className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <FontAwesomeIcon icon={faX} />
+                  </button>
                 </div>
-              ) : error ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-red-400">
-                    <p className="text-lg mb-2">Error loading file</p>
-                    <p className="text-sm">{error}</p>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 p-4 min-h-0">
+                {loading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="inline-block w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin mb-4"></div>
+                      <p className="text-gray-400">Loading file...</p>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                getPreviewContent()
-              )}
-            </div>
-          </motion.div>
+                ) : error ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center text-red-400">
+                      <p className="text-lg mb-2">Error loading file</p>
+                      <p className="text-sm">{error}</p>
+                    </div>
+                  </div>
+                ) : (
+                  getPreviewContent()
+                )}
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -13,17 +13,13 @@ import {
   faDownload,
   faSearch,
   faDatabase,
-  faCog,
-  faExternalLinkAlt,
-  faKey,
-  faLink
+  faCog
 } from '@fortawesome/free-solid-svg-icons';
-import VideoExtractor from '../components/VideoExtractor';
 import { Link } from 'react-router-dom';
 
 const ApiPage = () => {
   const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('system');
+  const [activeTab, setActiveTab] = useState('filesystem');
   
   // Initialize theme from localStorage on component mount
   useEffect(() => {
@@ -58,9 +54,9 @@ const ApiPage = () => {
     },
     {
       id: 'system',
-      name: 'Jut.su Injector',
-      icon: faPlay,
-      description: 'Extract video links from jut.su episodes'
+      name: 'System',
+      icon: faCog,
+      description: 'System information and utilities'
     },
     {
       id: 'database',
@@ -123,37 +119,7 @@ const ApiPage = () => {
   ];
 
   const systemEndpoints = [
-    {
-      method: 'POST',
-      path: '/api/extract',
-      description: 'Extract video URL from jut.su episode page',
-      parameters: [
-        { name: 'api_key', type: 'string', required: true, description: 'API authentication key' },
-        { name: 'url', type: 'string', required: true, description: 'jut.su episode URL' }
-      ],
-      response: {
-        type: 'object',
-        example: `{
-  "success": true,
-  "video_url": "https://r1.yandexwebcache.org/episode1080.mp4?hash=example"
-}`
-      },
-      icon: faPlay
-    },
-    {
-      method: 'GET',
-      path: '/api/video-health',
-      description: 'Check video extractor service health',
-      parameters: [],
-      response: {
-        type: 'object',
-        example: `{
-  "status": "ok",
-  "message": "Video extractor API is running"
-}`
-      },
-      icon: faCheck
-    }
+    // Placeholder for future system endpoints
   ];
 
   const databaseEndpoints = [
@@ -266,10 +232,10 @@ const ApiPage = () => {
               </h2>
               <div className="flex items-center gap-3 p-4 bg-black/30 rounded-lg border border-white/10">
                 <code className="flex-1 text-green-400 font-mono">
-                  {window.location.hostname === 'localhost' ? window.location.origin : 'https://sinkdev.dev'}
+                  {window.location.hostname === 'localhost' ? window.location.origin : 'https://SinkDev.eu'}
                 </code>
                 <button
-                  onClick={() => copyToClipboard(window.location.hostname === 'localhost' ? window.location.origin : 'https://sinkdev.dev', 'base-url')}
+                  onClick={() => copyToClipboard(window.location.hostname === 'localhost' ? window.location.origin : 'https://SinkDev.eu', 'base-url')}
                   className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                   title="Copy base URL"
                 >
@@ -293,12 +259,12 @@ const ApiPage = () => {
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => (tab.id === 'filesystem' || tab.id === 'system') && setActiveTab(tab.id)}
-                  disabled={tab.id !== 'filesystem' && tab.id !== 'system'}
+                  onClick={() => tab.id === 'filesystem' && setActiveTab(tab.id)}
+                  disabled={tab.id !== 'filesystem'}
                   className={`flex-1 min-w-fit px-6 py-4 rounded-lg transition-all duration-200 ${
                     activeTab === tab.id
                       ? 'bg-blue-500/20 text-blue-400 border border-blue-400/30'
-                      : (tab.id === 'filesystem' || tab.id === 'system')
+                      : tab.id === 'filesystem' 
                         ? 'text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer'
                         : 'text-gray-600 cursor-not-allowed opacity-50'
                   }`}
@@ -323,254 +289,10 @@ const ApiPage = () => {
           >
             <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
               <FontAwesomeIcon icon={faSearch} className="text-blue-400 icon-keep-color" />
-              {activeTab === 'system' ? 'Jut.su Injector API' : `${tabs.find(tab => tab.id === activeTab)?.name} Endpoints`}
+              {tabs.find(tab => tab.id === activeTab)?.name} Endpoints
             </h2>
             
-            {activeTab === 'system' ? (
-              <div className="space-y-8">
-                {/* Jut.su Injector Info */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6 }}
-                  className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl border border-purple-400/30 p-8"
-                >
-                  <div className="flex items-start gap-6">
-                    <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center flex-shrink-0">
-                      <FontAwesomeIcon icon={faPlay} className="text-2xl text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-4">
-                        <h3 className="text-2xl font-bold text-white">Jut.su Premium Injector</h3>
-                        <a
-                          href="https://github.com/MONZikWasTaken/Jutsu-Premium-Injector"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 hover:text-white rounded-lg transition-all duration-200 text-sm font-medium border border-gray-600/30"
-                        >
-                          <FontAwesomeIcon icon={faExternalLinkAlt} className="text-xs" />
-                          GitHub Repository
-                        </a>
-                      </div>
-                      <p className="text-gray-300 mb-6 leading-relaxed">
-                        Расширение для браузера которое разблокирует премиум видео на Jut.su. 
-                        Использует наш API для извлечения прямых ссылок на видео, обходя ограничения премиум подписки.
-                      </p>
-                      
-                      {/* API Connection Info */}
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div className="bg-black/20 rounded-lg p-4 border border-white/10">
-                          <div className="flex items-center gap-2 mb-3">
-                            <FontAwesomeIcon icon={faLink} className="text-blue-400" />
-                            <h4 className="font-semibold text-white">API Endpoint</h4>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <code className="flex-1 text-green-400 font-mono text-sm bg-black/30 px-3 py-2 rounded">
-                              {window.location.hostname === 'localhost' ? window.location.origin : 'https://sinkdev.dev'}/api/extract
-                            </code>
-                            <button
-                              onClick={() => copyToClipboard(`${window.location.hostname === 'localhost' ? window.location.origin : 'https://sinkdev.dev'}/api/extract`, 'injector-endpoint')}
-                              className="p-2 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                              title="Copy endpoint URL"
-                            >
-                              <FontAwesomeIcon 
-                                icon={copiedEndpoint === 'injector-endpoint' ? faCheck : faCopy} 
-                                className="text-xs"
-                              />
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div className="bg-black/20 rounded-lg p-4 border border-white/10">
-                          <div className="flex items-center gap-2 mb-3">
-                            <FontAwesomeIcon icon={faKey} className="text-yellow-400" />
-                            <h4 className="font-semibold text-white">API Key</h4>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <code className="flex-1 text-yellow-400 font-mono text-sm bg-black/30 px-3 py-2 rounded">
-                              SINKDEVFREE
-                            </code>
-                            <button
-                              onClick={() => copyToClipboard('SINKDEVFREE', 'injector-key')}
-                              className="p-2 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                              title="Copy API key"
-                            >
-                              <FontAwesomeIcon 
-                                icon={copiedEndpoint === 'injector-key' ? faCheck : faCopy} 
-                                className="text-xs"
-                              />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-6 p-4 bg-blue-500/10 border border-blue-400/20 rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <FontAwesomeIcon icon={faCode} className="text-blue-400 mt-1 flex-shrink-0" />
-                          <div>
-                            <h5 className="font-medium text-blue-400 mb-2">Как использовать в расширении:</h5>
-                            <ul className="text-gray-300 text-sm space-y-1">
-                              <li>• Установи расширение из GitHub репозитория</li>
-                              <li>• В настройках расширения укажи наш API endpoint</li>
-                              <li>• Введи API ключ: <code className="text-yellow-400 bg-black/30 px-2 py-1 rounded">SINKDEVFREE</code></li>
-                              <li>• Наслаждайся бесплатным премиум контентом на Jut.su</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Live API Tester */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.1 }}
-                  className="bg-white/5 rounded-xl border border-white/10 p-8"
-                >
-                  <div className="flex items-center gap-3 mb-6">
-                    <FontAwesomeIcon icon={faPlay} className="text-green-400 text-xl" />
-                    <h3 className="text-xl font-bold text-white">Live API Tester</h3>
-                  </div>
-                  <p className="text-gray-300 mb-6">
-                    Протестируй API прямо здесь. Вставь ссылку на эпизод jut.su и получи прямую ссылку на видео.
-                  </p>
-                  <VideoExtractor />
-                </motion.div>
-                
-                {/* API Documentation for Video Extractor */}
-                <div className="space-y-6">
-                  {systemEndpoints.map((endpoint, index) => (
-                    <motion.div
-                      key={`${endpoint.method}-${endpoint.path}`}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: 0.3 + index * 0.1 }}
-                      className="bg-white/5 rounded-xl border border-white/10 overflow-hidden"
-                    >
-                      {/* Endpoint Header */}
-                      <div className="p-6 border-b border-white/10">
-                        <div className="flex items-center gap-4 mb-4">
-                          <div className="flex items-center gap-3">
-                            <FontAwesomeIcon icon={endpoint.icon} className="text-xl text-blue-400 icon-keep-color" />
-                            <span className={`px-3 py-1 rounded-lg text-sm font-mono font-semibold border ${getMethodColor(endpoint.method)}`}>
-                              {endpoint.method}
-                            </span>
-                          </div>
-                          <code className="flex-1 text-lg font-mono text-white">
-                            {endpoint.path}
-                          </code>
-                          <button
-                            onClick={() => copyToClipboard(`${window.location.hostname === 'localhost' ? window.location.origin : 'https://sinkdev.dev'}${endpoint.path}`, endpoint.path)}
-                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                            title="Copy full URL"
-                          >
-                            <FontAwesomeIcon 
-                              icon={copiedEndpoint === endpoint.path ? faCheck : faCopy} 
-                              className="text-sm"
-                            />
-                          </button>
-                        </div>
-                        <p className="text-gray-300 leading-relaxed">
-                          {endpoint.description}
-                        </p>
-                      </div>
-
-                      {/* Endpoint Details */}
-                      <div className="p-6 space-y-6">
-                        {/* Parameters */}
-                        {endpoint.parameters.length > 0 && (
-                          <div>
-                            <h4 className="text-lg font-semibold text-white mb-4">Parameters</h4>
-                            <div className="space-y-3">
-                              {endpoint.parameters.map((param, paramIndex) => (
-                                <div key={paramIndex} className="flex items-center gap-4 p-3 bg-black/20 rounded-lg">
-                                  <code className="font-mono text-blue-400 min-w-fit">
-                                    {param.name}
-                                  </code>
-                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                    param.required 
-                                      ? 'bg-red-400/20 text-red-400 border border-red-400/30' 
-                                      : 'bg-gray-400/20 text-gray-400 border border-gray-400/30'
-                                  }`}>
-                                    {param.required ? 'required' : 'optional'}
-                                  </span>
-                                  <span className="text-gray-400 text-sm">
-                                    {param.type}
-                                  </span>
-                                  <span className="text-gray-300 text-sm">
-                                    {param.description}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Request Example */}
-                        {endpoint.method === 'POST' && (
-                          <div>
-                            <h4 className="text-lg font-semibold text-white mb-4">Request Example</h4>
-                            <div className="bg-black/30 rounded-lg p-4 border border-white/10">
-                              <div className="flex items-center justify-between mb-3">
-                                <span className="text-sm text-gray-400">
-                                  JSON Request Body
-                                </span>
-                                <button
-                                  onClick={() => copyToClipboard(`{
-  "api_key": "SINKDEVFREE",
-  "url": "https://jut.su/anime/episode"
-}`, `${endpoint.path}-request`)}
-                                  className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                                  title="Copy request example"
-                                >
-                                  <FontAwesomeIcon 
-                                    icon={copiedEndpoint === `${endpoint.path}-request` ? faCheck : faCopy} 
-                                    className="text-xs"
-                                  />
-                                </button>
-                              </div>
-                              <pre className="text-sm text-gray-300 font-mono overflow-x-auto whitespace-pre-wrap">
-{`{
-  "api_key": "SINKDEVFREE",
-  "url": "https://jut.su/anime/episode"
-}`}
-                              </pre>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Response */}
-                        <div>
-                          <h4 className="text-lg font-semibold text-white mb-4">Response</h4>
-                          <div className="bg-black/30 rounded-lg p-4 border border-white/10">
-                            <div className="flex items-center justify-between mb-3">
-                              <span className="text-sm text-gray-400">
-                                Type: <code className="text-green-400">{endpoint.response.type}</code>
-                              </span>
-                              <button
-                                onClick={() => copyToClipboard(endpoint.response.example, `${endpoint.path}-response`)}
-                                className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                                title="Copy response example"
-                              >
-                                <FontAwesomeIcon 
-                                  icon={copiedEndpoint === `${endpoint.path}-response` ? faCheck : faCopy} 
-                                  className="text-xs"
-                                />
-                              </button>
-                            </div>
-                            <pre className="text-sm text-gray-300 font-mono overflow-x-auto whitespace-pre-wrap">
-                              {endpoint.response.example}
-                            </pre>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            ) : getCurrentEndpoints().length > 0 ? (
+            {getCurrentEndpoints().length > 0 ? (
               <div className="space-y-6">
                 {getCurrentEndpoints().map((endpoint, index) => (
                 <motion.div
@@ -593,7 +315,7 @@ const ApiPage = () => {
                         {endpoint.path}
                       </code>
                       <button
-                        onClick={() => copyToClipboard(`${window.location.hostname === 'localhost' ? window.location.origin : 'https://sinkdev.dev'}${endpoint.path}`, endpoint.path)}
+                        onClick={() => copyToClipboard(`${window.location.hostname === 'localhost' ? window.location.origin : 'https://SinkDev.eu'}${endpoint.path}`, endpoint.path)}
                         className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                         title="Copy full URL"
                       >
